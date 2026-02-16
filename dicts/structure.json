@@ -1,0 +1,6 @@
+{
+    "nav": "<nav class='{class}'>{list}</nav>",
+    "ul": "<ul class='{class}'>{items}</ul>",
+    "li": "<li class='{class}'>{content}</li>",
+    "a": "<a href='{url}' class='{class}'>{text}</a>"
+}

@@ -1,0 +1,13 @@
+{
+    "lvl1": {
+        "nav": "site-nav",
+        "ul": "nav-list-root",
+        "li": "nav-item-lvl1",
+        "a": "nav-link"
+    },
+    "lvl2": {
+        "ul": "sub-nav-depth2",
+        "li": "nav-item-lvl2",
+        "a": "sub-link"
+    }
+}
