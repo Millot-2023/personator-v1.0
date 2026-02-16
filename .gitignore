@@ -1,0 +1,14 @@
+# Système
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Dossiers générés
+export/
+trash_temp/
+
+# Facultatif : ignorer les backups JSON si tu ne veux pas les versionner
+# core/backups/*.json
+
+# Logs d'erreur PHP
+*.log
