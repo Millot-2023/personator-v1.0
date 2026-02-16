@@ -81,20 +81,38 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skeletor v1.0</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: #eee; padding: 50px; }
-        .container { max-width: 900px; margin: auto; background: #222; padding: 30px; border: 1px solid #333; }
-        .row { display: flex; align-items: center; margin-bottom: 10px; background: #2a2a2a; padding: 10px; border-radius: 4px; }
-        .drag-handle { cursor: grab; padding: 0 15px; color: #666; font-size: 20px; user-select: none; }
-        .input-group { display: flex; gap: 10px; flex-grow: 1; }
-        select, input[type="text"] { padding: 8px; background: #333; color: #fff; border: 1px solid #444; }
-        input[type="text"] { flex-grow: 1; }
-        .btn-add { background: #333; border: 1px dashed #555; width: 100%; padding: 10px; cursor: pointer; color: #aaa; margin: 20px 0; }
-        .btn-submit { background: #e67e22; color: #fff; border: none; padding: 15px; width: 100%; cursor: pointer; font-weight: bold; }
-        .btn-remove { background: #c0392b; color: white; border: none; padding: 8px 12px; cursor: pointer; font-weight: bold; margin-left: 10px; }
-        .status-bar { color: orange; font-weight: bold; margin-bottom: 15px; }
-        .admin-link { display: inline-block; margin-bottom: 20px; color: orange; text-decoration: none; font-size: 0.9rem; border: 1px solid orange; padding: 2px 8px; border-radius: 3px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: #eee; padding: 20px; margin: 0; }
+        .container { max-width: 900px; margin: auto; background: #222; padding: 20px; border: 1px solid #333; border-radius: 8px; }
+        h1 { font-size: 1.5rem; text-align: center; }
+        .row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 10px; background: #2a2a2a; padding: 10px; border-radius: 4px; gap: 10px; }
+        .drag-handle { cursor: grab; padding: 5px 10px; color: #666; font-size: 20px; user-select: none; }
+        .input-group { display: flex; flex-wrap: wrap; gap: 10px; flex-grow: 1; }
+        select, input[type="text"] { padding: 10px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
+        .level-select { flex: 1 1 150px; }
+        .title-input { flex: 2 1 200px; }
+        .parent-selector { flex: 1 1 150px; }
+        .btn-add { background: #333; border: 1px dashed #555; width: 100%; padding: 15px; cursor: pointer; color: #aaa; margin: 20px 0; border-radius: 4px; }
+        .btn-submit { background: #e67e22; color: #fff; border: none; padding: 15px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 1rem; }
+        .btn-remove { background: #c0392b; color: white; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; margin-left: auto; }
+        .status-bar { color: orange; font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .admin-link { display: inline-block; margin-bottom: 20px; color: orange; text-decoration: none; font-size: 0.9rem; border: 1px solid orange; padding: 5px 12px; border-radius: 3px; }
+        .load-zone { margin-bottom: 20px; background: #333; padding: 15px; border-radius: 4px; }
+        .load-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .save-zone { background: #2a2a2a; padding: 15px; margin-bottom: 20px; border: 1px solid #444; display: flex; flex-wrap: wrap; gap: 10px; border-radius: 4px; }
+        .config-name-input { flex: 1 1 250px; padding: 10px; background: #111; color: orange; border: 1px solid #555; }
+        .btn-save { background: #e67e22; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; flex: 0 1 auto; }
+        
+        @media (max-width: 600px) {
+            .row { padding: 15px; }
+            .input-group { flex-direction: column; }
+            .level-select, .title-input, .parent-selector { width: 100%; flex: none; }
+            .btn-remove { width: 100%; margin: 10px 0 0 0; }
+            .config-name-input { width: 100%; }
+            .btn-save { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -107,9 +125,10 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
         <div class="status-bar"><?php echo $statusMessage; ?></div>
     <?php endif; ?>
 
-    <div style="margin-bottom: 20px; background: #333; padding: 10px; border-radius: 4px;">
-        <form method="GET" style="display: flex; gap: 10px; align-items: center;">
-            <select name="load" style="flex-grow: 1;">
+    <div class="load-zone">
+        <form method="GET" class="load-form">
+            <label>Charger :</label>
+            <select name="load" style="flex-grow: 1; min-width: 150px;">
                 <option value="">-- Projet vierge --</option>
                 <?php foreach ($backups as $file): ?>
                     <option value="<?php echo $file; ?>" <?php echo (isset($_GET['load']) && $_GET['load'] == $file) ? 'selected' : ''; ?>>
@@ -117,17 +136,17 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
                     </option>
                 <?php endforeach; ?>
             </select>
-            <button type="submit">OK</button>
-            <a href="?" style="color: orange; text-decoration: none; font-size: 0.8rem; font-weight: bold;">CLEAR</a>
+            <button type="submit" style="padding: 10px 20px; cursor:pointer;">OK</button>
+            <a href="?" style="color: orange; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 5px;">CLEAR</a>
         </form>
     </div>
 
     <form method="POST" id="main-form">
         <div id="inputs-container"></div>
         <button type="button" class="btn-add" onclick="addRow()">+ Ajouter une ligne</button>
-        <div style="background: #2a2a2a; padding: 15px; margin-bottom: 20px; border: 1px solid #444;">
-            <input type="text" name="config_name" placeholder="Nom du projet" style="width: 60%; color: orange;" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
-            <button type="submit" name="save_config" style="background: #e67e22; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold;">💾 SAUVEGARDER</button>
+        <div class="save-zone">
+            <input type="text" name="config_name" placeholder="Nom du projet" class="config-name-input" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
+            <button type="submit" name="save_config" class="btn-save">💾 SAUVEGARDER</button>
         </div>
         <button type="submit" name="generate" class="btn-submit">GÉNÉRER L'ARBORESCENCE</button>
     </form>
@@ -183,21 +202,18 @@ function addRow() {
 function refreshAllLists() {
     const rows = document.querySelectorAll('.row');
     const dossiers = [];
-    
     rows.forEach((row, i) => {
         if(row.querySelector('.level-select').value === "2") {
             dossiers.push({i: i, name: row.querySelector('.title-input').value || "Dossier " + (i + 1)});
         }
     });
-
     rows.forEach(row => {
         const lvl = row.querySelector('.level-select').value;
         const sel = row.querySelector('.parent-selector');
         const hid = row.querySelector('.parent-hidden');
-        
         if(lvl.startsWith("3")) {
             const old = row.getAttribute('data-temp') || hid.value;
-            sel.innerHTML = '<option value="">-- Choisir Dossier --</option>' + 
+            sel.innerHTML = '<option value="">-- Parent --</option>' + 
                 dossiers.map(d => `<option value="${d.i}" ${d.i == old ? 'selected' : ''}>${d.name}</option>`).join('');
             sel.style.display = 'inline-block';
             sel.onchange = () => { hid.value = sel.value; row.removeAttribute('data-temp'); };
