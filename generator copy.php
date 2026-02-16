@@ -27,6 +27,11 @@ if (isset($_POST['save_config'])) {
     $statusMessage = "Configuration '$name' sauvegardée !";
 }
 
+
+
+
+
+
 if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title'])) {
     if (!is_dir("export")) { mkdir("export", 0777, true); }
     $exportPath = "export/" . $projectName;
@@ -40,9 +45,11 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
             $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
             @$todo($fileinfo->getRealPath());
         }
+        // On supprime le dossier racine du projet pour être sûr qu'il est clean
         @rmdir($exportPath);
     }
     
+    // On le recrée tout neuf
     mkdir($exportPath, 0777, true);
 
     $structure = [];
@@ -83,6 +90,26 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
     $app->arborate($structure);
     $statusMessage = "✅ ARBORESCENCE GÉNÉRÉE DANS /export/$projectName !";
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -175,32 +202,6 @@ function handleDrop(e) {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function addRow() {
     const container = document.getElementById('inputs-container');
     const newRow = document.createElement('div');
@@ -210,16 +211,10 @@ function addRow() {
         <div class="drag-handle">☰</div>
         <div class="input-group">
             <select name="level[]" class="level-select">
-
-                <option value="1">Nom du site</option>
-
-                <option value="2">Dossier</option>
-
-                <option value="3">Sous-dossier</option>
-
-                <option value="3_dir">Pages</option>
-
-
+                <option value="1">Niveau 1 (Racine)</option>
+                <option value="2">Niveau 2 (Dossier)</option>
+                <option value="3">Niveau 3 (Fichier)</option>
+                <option value="3_dir">Niveau 3 (Sous-Dossier)</option>
             </select>
             <input type="text" name="title[]" placeholder="Nom" class="title-input">
             <input type="hidden" name="parent_folder[]" class="parent-hidden">
@@ -243,44 +238,37 @@ function addRow() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function refreshAllLists() {
     const rows = document.querySelectorAll('.row');
     const dossiers = [];
+    
     rows.forEach((row, i) => {
-        if(row.querySelector('.level-select').value === "2") {
-            dossiers.push({i: i, name: row.querySelector('.title-input').value || "Dossier " + (i + 1)});
+        const val = row.querySelector('.level-select').value;
+        // Correction : On accepte le Niveau 2 ET le Niveau 3 (Sous-Dossier) comme parents
+        if(val === "2" || val === "3_dir") {
+            dossiers.push({
+                i: i, 
+                name: row.querySelector('.title-input').value || (val === "2" ? "Dossier " : "S-Dossier ") + (i + 1)
+            });
         }
     });
+
     rows.forEach(row => {
         const lvl = row.querySelector('.level-select').value;
         const sel = row.querySelector('.parent-selector');
         const hid = row.querySelector('.parent-hidden');
-        if(lvl.startsWith("3")) {
+        
+        if(lvl === "3" || lvl === "3_dir") {
             const old = row.getAttribute('data-temp') || hid.value;
             sel.innerHTML = '<option value="">-- Parent --</option>' + 
                 dossiers.map(d => `<option value="${d.i}" ${d.i == old ? 'selected' : ''}>${d.name}</option>`).join('');
+            
             sel.style.display = 'inline-block';
-            sel.onchange = () => { hid.value = sel.value; row.removeAttribute('data-temp'); };
-            hid.value = sel.value;
+            sel.onchange = () => { 
+                hid.value = sel.value; 
+                row.removeAttribute('data-temp'); 
+            };
+            // Note: on ne force plus hid.value = sel.value ici pour éviter d'écraser la sélection au survol
         } else {
             sel.style.display = 'none';
             hid.value = "";
@@ -288,21 +276,33 @@ function refreshAllLists() {
     });
 }
 
+
+
+
 const data = <?php echo $loadedData; ?>;
 window.onload = () => {
     if(data && data.level) {
+        // 1. On vide le container et on recrée les lignes
         document.getElementById('inputs-container').innerHTML = '';
+        
         data.level.forEach((lvl, i) => {
             addRow();
             const rows = document.querySelectorAll('.row');
             const r = rows[rows.length - 1];
+            
             r.querySelector('.level-select').value = lvl;
             r.querySelector('.title-input').value = data.title[i];
+            
+            // On stocke l'index du parent dans le champ caché
             if(data.parent_folder && data.parent_folder[i] !== undefined) {
                 r.querySelector('.parent-hidden').value = data.parent_folder[i];
             }
         });
+
+        // 2. On génère les listes d'options
         refreshAllLists();
+
+        // 3. On force la sélection visuelle du parent
         document.querySelectorAll('.row').forEach(row => {
             const hid = row.querySelector('.parent-hidden');
             const sel = row.querySelector('.parent-selector');
@@ -314,6 +314,10 @@ window.onload = () => {
         addRow(); 
     }
 };
+
+
+
+
 </script>
 </body>
 </html>
