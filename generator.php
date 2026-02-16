@@ -8,7 +8,7 @@ $backupDir = 'core/backups/';
 if (!is_dir($backupDir)) { mkdir($backupDir, 0777, true); }
 
 $loadedData = 'null';
-if (!empty($_GET['load'])) {
+if (isset($_GET['load']) && !empty($_GET['load'])) {
     $fileToLoad = $backupDir . basename($_GET['load']);
     if (file_exists($fileToLoad) && !is_dir($fileToLoad)) { 
         $loadedData = file_get_contents($fileToLoad); 
@@ -27,8 +27,15 @@ if (isset($_POST['save_config'])) {
     $statusMessage = "Configuration '$name' sauvegardée !";
 }
 
+
+
+
+
+
 if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title'])) {
+    if (!is_dir("export")) { mkdir("export", 0777, true); }
     $exportPath = "export/" . $projectName;
+    
     if (is_dir($exportPath)) {
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($exportPath, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -36,9 +43,14 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
         );
         foreach ($files as $fileinfo) {
             $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
-            $todo($fileinfo->getRealPath());
+            @$todo($fileinfo->getRealPath());
         }
+        // On supprime le dossier racine du projet pour être sûr qu'il est clean
+        @rmdir($exportPath);
     }
+    
+    // On le recrée tout neuf
+    mkdir($exportPath, 0777, true);
 
     $structure = [];
     $levels = $_POST['level'];
@@ -58,14 +70,15 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
             if ($root) $structure[$root][$name] = [];
         } elseif ($lvl == "3" || $lvl == "3_dir") {
             $parentIndex = $parents[$index] ?? null;
-            if ($parentIndex !== null && $parentIndex !== "") {
+            if ($parentIndex !== null && $parentIndex !== "" && isset($names[$parentIndex])) {
                 $parentName = $names[$parentIndex];
                 foreach ($structure as $rootName => &$subFolders) {
                     if (isset($subFolders[$parentName])) {
                         if ($lvl == "3_dir") {
+                            if (!is_array($subFolders[$parentName])) { $subFolders[$parentName] = []; }
                             $subFolders[$parentName][$name] = []; 
                         } else {
-                            $subFolders[$parentName][] = $name; 
+                            $subFolders[$parentName][] = (string)$name; 
                         }
                         break;
                     }
@@ -73,9 +86,30 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
             }
         }
     }
+    
     $app->arborate($structure);
-    $statusMessage = "ARBORESCENCE GÉNÉRÉE DANS /export/$projectName !";
+    $statusMessage = "✅ ARBORESCENCE GÉNÉRÉE DANS /export/$projectName !";
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -225,19 +259,49 @@ function refreshAllLists() {
     });
 }
 
+
+
+
+
 const data = <?php echo $loadedData; ?>;
 window.onload = () => {
     if(data && data.level) {
+        // 1. On vide le container et on recrée les lignes
+        document.getElementById('inputs-container').innerHTML = '';
+        
         data.level.forEach((lvl, i) => {
             addRow();
-            const r = document.querySelectorAll('.row')[i];
+            const rows = document.querySelectorAll('.row');
+            const r = rows[rows.length - 1];
+            
             r.querySelector('.level-select').value = lvl;
             r.querySelector('.title-input').value = data.title[i];
-            if(lvl.startsWith("3")) r.setAttribute('data-temp', data.parent_folder[i]);
+            
+            // On stocke l'index du parent dans le champ caché
+            if(data.parent_folder && data.parent_folder[i] !== undefined) {
+                r.querySelector('.parent-hidden').value = data.parent_folder[i];
+            }
         });
+
+        // 2. On génère les listes d'options
         refreshAllLists();
-    } else { addRow(); }
+
+        // 3. On force la sélection visuelle du parent
+        document.querySelectorAll('.row').forEach(row => {
+            const hid = row.querySelector('.parent-hidden');
+            const sel = row.querySelector('.parent-selector');
+            if (sel && hid && hid.value !== "") {
+                sel.value = hid.value;
+            }
+        });
+    } else { 
+        addRow(); 
+    }
 };
+
+
+
+
 </script>
 </body>
 </html>
