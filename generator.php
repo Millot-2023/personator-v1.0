@@ -151,12 +151,39 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
     <form method="POST" id="main-form">
         <div id="inputs-container"></div>
         <button type="button" class="btn-add" onclick="addRow()">+ Ajouter une ligne</button>
+
+
+
+
+
+
+
+
+
+
         <div class="save-zone">
             <input type="text" name="config_name" placeholder="Nom du projet" class="config-name-input" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
             <button type="submit" name="save_config" class="btn-save">💾 SAUVEGARDER</button>
         </div>
         <button type="submit" name="generate" class="btn-submit">GÉNÉRER L'ARBORESCENCE</button>
     </form>
+
+
+
+
+
+
+
+<!--  ELEMENTS DU TREE 
+<div id="tree-preview" style="margin-top: 20px; padding: 20px; background: #2d2d2d; color: #adadad; border-radius: 8px; font-family: monospace;">
+    <h3 style="color: #fff; margin-top: 0;">🌲 Aperçu de la structure</h3>
+    <div id="tree-display"></div>
+</div>
+ELEMENTS DU TREE   -->
+
+
+
+
 </div>
 
 <script>
@@ -209,24 +236,28 @@ function addRow() {
     newRow.innerHTML = `
         <div class="drag-handle">☰</div>
         <div class="input-group">
+
+
             <select name="level[]" class="level-select">
-
                 <option value="1">Nom du site</option>
-
                 <option value="2">Dossier</option>
-
                 <option value="3">Sous-dossier</option>
-
                 <option value="3_dir">Pages</option>
-
-
             </select>
+
+
             <input type="text" name="title[]" placeholder="Nom" class="title-input">
             <input type="hidden" name="parent_folder[]" class="parent-hidden">
             <select class="parent-selector" style="display:none;"></select>
         </div>
         <button type="button" class="btn-remove" onclick="this.closest('.row').remove(); refreshAllLists();">X</button>`;
     
+
+
+
+
+
+
     newRow.addEventListener('dragstart', handleDragStart);
     newRow.addEventListener('dragover', handleDragOver);
     newRow.addEventListener('drop', handleDrop);
@@ -314,6 +345,8 @@ window.onload = () => {
         addRow(); 
     }
 };
+
 </script>
+<!--<script src="preview.js"></script>-->
 </body>
 </html>
