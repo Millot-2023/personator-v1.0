@@ -16,7 +16,6 @@ if (isset($_GET['load']) && !empty($_GET['load'])) {
 }
 
 $backups = array_diff(scandir($backupDir), ['.', '..']);
-
 $projectName = !empty($_POST['config_name']) ? basename($_POST['config_name']) : "Nouveau-Persona";
 $app = new Personator($projectName, $_POST, $_FILES);
 $statusMessage = "";
@@ -27,63 +26,13 @@ if (isset($_POST['save_config'])) {
     $statusMessage = "Configuration '$name' sauvegardée !";
 }
 
-if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title'])) {
+if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content'])) {
     if (!is_dir("export")) { mkdir("export", 0777, true); }
-    $exportPath = "export/" . $projectName;
-    
-    if (is_dir($exportPath)) {
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($exportPath, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($files as $fileinfo) {
-            $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
-            @$todo($fileinfo->getRealPath());
-        }
-        @rmdir($exportPath);
-    }
-    
-    mkdir($exportPath, 0777, true);
-
-    $structure = [];
-    $levels = $_POST['level'];
-    $names = $_POST['title'];
-    $parents = $_POST['parent_folder'] ?? [];
-
-    foreach ($levels as $index => $lvl) {
-        $name = !empty($names[$index]) ? $names[$index] : "sans-nom";
-        
-        if ($lvl == "1") {
-            $structure[$name] = [];
-        } elseif ($lvl == "2") {
-            $root = "";
-            for ($i = $index; $i >= 0; $i--) { 
-                if ($levels[$i] == "1") { $root = $names[$i]; break; } 
-            }
-            if ($root) $structure[$root][$name] = [];
-        } elseif ($lvl == "3" || $lvl == "3_dir") {
-            $parentIndex = $parents[$index] ?? null;
-            if ($parentIndex !== null && $parentIndex !== "" && isset($names[$parentIndex])) {
-                $parentName = $names[$parentIndex];
-                foreach ($structure as $rootName => &$subFolders) {
-                    if (isset($subFolders[$parentName])) {
-                        if ($lvl == "3_dir") {
-                            if (!is_array($subFolders[$parentName])) { $subFolders[$parentName] = []; }
-                            $subFolders[$parentName][$name] = []; 
-                        } else {
-                            $subFolders[$parentName][] = (string)$name; 
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    
-    $app->arborate($structure);
-    $statusMessage = "✅ ARBORESCENCE GÉNÉRÉE DANS /export/$projectName !";
+    $app->arborate($_POST);
+    $statusMessage = "✅ PERSONA GÉNÉRÉ DANS /export/$projectName !";
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -91,329 +40,223 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personator v1.0</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: #eee; padding: 20px; margin: 0; }
-        .container { max-width: 900px; margin: auto; background: #222; padding: 20px; border: 1px solid #333; border-radius: 8px; }
-        h1 { font-size: 1.5rem; text-align: center; }
-        .row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 10px; background: #2a2a2a; padding: 10px; border-radius: 4px; gap: 10px; }
-        .drag-handle { cursor: grab; padding: 5px 10px; color: #666; font-size: 20px; user-select: none; }
-        .input-group { display: flex; flex-wrap: wrap; gap: 10px; flex-grow: 1; }
-        select, input[type="text"], textarea { padding: 10px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
-        .level-select { flex: 1 1 150px; }
-        .title-input { flex: 2 1 200px; }
-        .parent-selector { flex: 1 1 150px; }
-        .btn-add { background: #333; border: 1px dashed #555; width: 100%; padding: 15px; cursor: pointer; color: #aaa; margin: 20px 0; border-radius: 4px; }
-        .btn-submit { background: #e67e22; color: #fff; border: none; padding: 15px; width: 100%; cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 1rem; }
-        .btn-remove { background: #c0392b; color: white; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; border-radius: 4px; margin-left: auto; }
-        .status-bar { color: orange; font-weight: bold; margin-bottom: 15px; text-align: center; }
-        .admin-link { display: inline-block; margin-bottom: 20px; color: orange; text-decoration: none; font-size: 0.9rem; border: 1px solid orange; padding: 5px 12px; border-radius: 3px; }
-        .load-zone { margin-bottom: 20px; background: #333; padding: 15px; border-radius: 4px; }
-        .load-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-        .save-zone { background: #2a2a2a; padding: 15px; margin-bottom: 20px; border: 1px solid #444; display: flex; flex-wrap: wrap; gap: 10px; border-radius: 4px; }
-        .config-name-input { flex: 1 1 250px; padding: 10px; background: #111; color: orange; border: 1px solid #555; }
-        .btn-save { background: #e67e22; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; flex: 0 1 auto; }
+        * { box-sizing: border-box; }
+        body { background-color: #1a1a1a; color: #eee; font-family: sans-serif; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+        .header-main { display: flex; align-items: center; margin-bottom: 20px; position: relative; }
         
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
+        .admin-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 15px;
+            border: 1px solid #f39c12;
+            color: #f39c12;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.8em;
+            flex: none;
+            position: relative;
+            z-index: 10; /* Priorité sur le survol */
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .admin-link:hover {
+            background-color: #f39c12;
+            color: #ffffff;
         }
 
-        input[type="number"] {
-            -moz-appearance: textfield;
-            background: #333 !important;
-            color: orange !important;
-            border: 1px solid #444 !important;
+        .header-main h1 { 
+            flex: 1; 
+            text-align: center; 
+            margin: 0; 
+            transform: translateX(-35px); /* Ajusté pour éviter de couvrir le bouton */
+            pointer-events: none; /* Le titre ne bloque plus les clics autour de lui */
+        }
+
+        .load-zone, .save-zone-container { background: #222; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #333; }
+        .load-form, .save-zone { display: flex; gap: 10px; align-items: center; }
+        .load-form select, .save-zone input[type="text"] { flex: 1; height: 40px; padding: 0 10px; background: #111; color: #fff; border: 1px solid #444; }
+        .btn-ok, .btn-save { height: 40px; padding: 0 20px; flex: none; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+        .btn-ok { background: #eee; color: #333; }
+        .btn-save { background: #f39c12; color: white; }
+        .clear-btn { color: #f39c12; font-weight: bold; text-decoration: none; font-size: 0.9em; margin-left: 5px; }
+
+        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; background: #222; padding: 10px; border-radius: 4px; border: 1px solid transparent; }
+        .row.dragging { opacity: 0.5; border: 1px dashed #f39c12; }
+        .drag-handle { display: flex; align-items: center; cursor: grab; color: #555; font-size: 20px; padding: 0 5px; }
+        
+        .input-group { display: flex; gap: 10px; flex: 1; align-items: stretch; }
+        .content-wrapper { flex: 1; min-width: 0; }
+        
+        .level-select, .content-input, .btn-remove { 
+            height: 40px !important; 
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            font-size: 14px;
+        }
+        .level-select { flex: 0 0 250px; padding: 0 10px; }
+        .content-input { width: 100%; padding: 0 10px; background: #111; }
+        textarea.content-input { padding: 10px; height: 40px !important; resize: none; }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        .btn-remove { background: #c0392b; color: white; border: none; width: 40px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-submit { width: 100%; padding: 15px; background: #f39c12; color: white; border: none; font-weight: bold; font-size: 1.1em; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
+        
+        @media (max-width: 768px) {
+            .header-main h1 { transform: none; }
+            .input-group { flex-direction: column; }
+            .level-select { flex: 1 1 auto; width: 100%; }
+            .content-wrapper { width: 100%; }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Personator v1.0</h1>
-    <a href="admin.php" class="admin-link">Admin</a>
-    
-    <?php if($statusMessage): ?>
-        <div class="status-bar"><?php echo $statusMessage; ?></div>
-    <?php endif; ?>
+    <div class="container">
+        <div class="header-main">
+            <a href="./admin.php" class="admin-link">Admin</a>
+            <h1>Personator v1.0</h1>
+        </div>
+        
+        <div class="load-zone">
+            <form method="GET" class="load-form">
+                <span style="color:#ccc;">Charger :</span>
+                <select name="load">
+                    <option value="">-- Projet vierge --</option>
+                    <?php foreach ($backups as $file): ?>
+                        <option value="<?php echo $file; ?>" <?php echo (isset($_GET['load']) && $_GET['load'] == $file) ? 'selected' : ''; ?>>
+                            <?php echo str_replace('.json', '', $file); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="btn-ok">OK</button>
+                <a href="?" class="clear-btn">CLEAR</a>
+            </form>
+        </div>
 
-    <div class="load-zone">
-        <form method="GET" class="load-form">
-            <label>Charger :</label>
-            <select name="load" style="flex-grow: 1; min-width: 150px;">
-                <option value="">-- Projet vierge --</option>
-                <?php foreach ($backups as $file): ?>
-                    <option value="<?php echo $file; ?>" <?php echo (isset($_GET['load']) && $_GET['load'] == $file) ? 'selected' : ''; ?>>
-                        <?php echo str_replace('.json', '', $file); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <button type="submit" style="padding: 10px 20px; cursor:pointer;">OK</button>
-            <a href="?" style="color: orange; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 5px;">CLEAR</a>
+        <form method="POST" id="main-form">
+            <div id="inputs-container"></div>
+            <button type="button" onclick="addRow()" style="width:100%; padding:12px; margin-bottom:20px; background: #333; color: #999; border: 1px dashed #555; cursor:pointer; border-radius:4px;">+ Ajouter une ligne</button>
+            <div class="save-zone-container">
+                <div class="save-zone">
+                    <input type="text" name="config_name" placeholder="Nom du projet" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
+                    <button type="submit" name="save_config" class="btn-save">💾 SAUVEGARDER CONFIG</button>
+                </div>
+            </div>
+            <button type="submit" name="generate" class="btn-submit">GÉNÉRER LE PERSONA</button>
         </form>
     </div>
 
-    <form method="POST" id="main-form" enctype="multipart/form-data">
-        
-        <div style="background: #2a2a2a; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #444;">
-            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                <input type="text" name="p_prenom" placeholder="Prénom" style="flex: 1 1 200px;">
-                <input type="text" name="p_nom" placeholder="Nom" style="flex: 1 1 200px;">
-                <input type="text" name="p_localite" placeholder="Localité" style="flex: 1 1 200px;">
-            </div>
-            <label style="font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 5px;">Photo du Persona :</label>
-            <input type="file" name="p_photo" accept="image/*" style="width: 100%; color: #eee;">
-        </div>
+    <script>
+        let dragSrcEl = null;
 
-        <div id="inputs-container"></div>
-        <button type="button" class="btn-add" onclick="addRow()">+ Ajouter une ligne d'info libre</button>
-
-        <div class="save-zone">
-            <input type="text" name="config_name" placeholder="Nom du projet" class="config-name-input" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
-            <button type="submit" name="save_config" class="btn-save">💾 SAUVEGARDER CONFIG</button>
-        </div>
-        <button type="submit" name="generate" class="btn-submit">GÉNÉRER LE PERSONA</button>
-    </form>
-</div>
-
-<script>
-let dragSrcEl = null;
-
-function handleDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = 'move'; }
-function handleDragOver(e) { e.preventDefault(); }
-function handleDrop(e) {
-    e.stopPropagation();
-    if (dragSrcEl !== this) {
-        const list = this.parentNode;
-        const allNodes = Array.from(list.children);
-        if (allNodes.indexOf(dragSrcEl) < allNodes.indexOf(this)) { list.insertBefore(dragSrcEl, this.nextSibling); }
-        else { list.insertBefore(dragSrcEl, this); }
-        refreshAllLists();
-    }
-}
-
-function addRow() {
-    const container = document.getElementById('inputs-container');
-    const newRow = document.createElement('div');
-    newRow.className = 'row';
-    newRow.draggable = true;
-    newRow.innerHTML = `
-        <div class="drag-handle">☰</div>
-        <div class="input-group">
-            <select name="level[]" class="level-select" onchange="updateRowType(this)">
-                <optgroup label="IDENTITÉ & ÉTAT CIVIL">
-                    <option value="1">Nom du Persona</option>
-                    <option value="age">Âge</option>
-                    <option value="3">Citation / Verbatim</option>
-                </optgroup>
-                <optgroup label="PROFIL PSYCHOLOGIQUE">
-                    <option value="3">Personnalité (Bio)</option>
-                    <option value="3">Traits de caractère</option>
-                    <option value="3">Frustrations & Freins</option>
-                </optgroup>
-                <optgroup label="APTITUDES TECHNIQUES">
-                    <option value="3">Outils utilisés</option>
-                    <option value="3">Aisance numérique</option>
-                </optgroup>
-                <optgroup label="OBJECTIFS & LOISIRS">
-                    <option value="3">Objectifs & Besoins</option>
-                    <option value="3_dir">Liste à puces (Loisirs / Infos diverses)</option>
-                </optgroup>
-            </select>
-            <input type="text" name="title[]" placeholder="Texte ou intitulé" class="title-input">
-            <input type="hidden" name="parent_folder[]" class="parent-hidden">
-            <select class="parent-selector" style="display:none;"></select>
-        </div>
-        <button type="button" class="btn-remove" onclick="this.closest('.row').remove(); refreshAllLists();">X</button>`;
-
-    newRow.addEventListener('dragstart', handleDragStart);
-    newRow.addEventListener('dragover', handleDragOver);
-    newRow.addEventListener('drop', handleDrop);
-    
-    container.appendChild(newRow);
-    updateRowType(newRow.querySelector('.level-select'));
-    refreshAllLists();
-}
-
-
-
-
-
-
-
-
-function updateRowType(select) {
-    const row = select.closest('.row');
-    const oldInput = row.querySelector('.title-input');
-    let newInput;
-
-    const val = select.value;
-    const text = select.options[select.selectedIndex].text;
-
-    if (val === "age") {
-        newInput = document.createElement('input');
-        newInput.type = "number";
-        newInput.placeholder = "Votre age";
-        newInput.style.width = "100px";
-        newInput.style.flex = "none";
-    } 
-    else if (text === "Traits de personnalité" || 
-             text === "Aisance numérique" || 
-             text === "Outils utilisés" || 
-             text === "Objectifs & Besoins" || 
-             text === "Frustrations & Freins" || 
-             text === "Personnalité (Bio)" ||
-             val === "3" || 
-             val === "3_dir") {
-        
-        newInput = document.createElement('textarea');
-        newInput.placeholder = "Liste d'éléments (un par ligne)";
-        newInput.style.height = "40px";
-        newInput.style.overflow = "hidden";
-        newInput.style.flex = "2 1 200px";
-        
-        newInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-
-        newInput.addEventListener('focus', function() {
-            if (this.value === "") { this.value = "• "; }
-        });
-
-        newInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const start = this.selectionStart;
-                const end = this.selectionEnd;
-                this.value = this.value.substring(0, start) + "\n• " + this.value.substring(end);
-                this.selectionStart = this.selectionEnd = start + 3;
-                this.dispatchEvent(new Event('input'));
-            }
-        });
-    } 
-    else {
-        newInput = document.createElement('input');
-        newInput.type = "text";
-        newInput.placeholder = "Texte ou intitulé";
-        newInput.style.flex = "2 1 200px";
-    }
-
-    newInput.name = "title[]";
-    newInput.className = "title-input";
-    newInput.style.background = "#333";
-    newInput.style.color = (val === "age") ? "orange" : "#fff";
-    newInput.style.border = "1px solid #444";
-    newInput.style.padding = "10px";
-    newInput.style.borderRadius = "4px";
-    newInput.style.outline = "none";
-    newInput.style.resize = "none";
-
-    if (oldInput) {
-        oldInput.replaceWith(newInput);
-        if (newInput.tagName === "TEXTAREA") {
-            newInput.dispatchEvent(new Event('input'));
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
         }
-    }
-
-    // Indispensable pour afficher l'onglet parent immédiatement
-    refreshAllLists();
-}
-
-
-
-
-
-function refreshAllLists() {
-    const rows = document.querySelectorAll('.row');
-    const dossiers = [];
-    
-    // 1. On liste tous les dossiers (Section) présents
-    rows.forEach((row, i) => {
-        if(row.querySelector('.level-select').value === "2") {
-            dossiers.push({i: i, name: row.querySelector('.title-input').value || "Dossier " + (i + 1)});
-        }
-    });
-
-    // 2. On met à jour chaque ligne
-    rows.forEach(row => {
-        const lvl = row.querySelector('.level-select').value;
-        const sel = row.querySelector('.parent-selector');
-        const hid = row.querySelector('.parent-hidden');
-
-        // On affiche le parent-selector pour TOUT ce qui commence par 3
-        if(lvl.startsWith("3")) {
-            const old = row.getAttribute('data-temp') || hid.value;
-            sel.innerHTML = '<option value="">-- Parent --</option>' + 
-                dossiers.map(d => `<option value="${d.i}" ${d.i == old ? 'selected' : ''}>${d.name}</option>`).join('');
-            
-            sel.style.display = 'inline-block'; // Force l'affichage
-            sel.onchange = () => { hid.value = sel.value; row.removeAttribute('data-temp'); };
-            hid.value = sel.value;
-        } else {
-            sel.style.display = 'none';
-            hid.value = "";
-        }
-    });
-}
-
-
-
-
-
-
-
-
-
-const data = <?php echo $loadedData; ?>;
-window.onload = () => {
-    if(data) {
-        if(data.p_prenom) document.querySelector('input[name="p_prenom"]').value = data.p_prenom;
-        if(data.p_nom) document.querySelector('input[name="p_nom"]').value = data.p_nom;
-        if(data.p_localite) document.querySelector('input[name="p_localite"]').value = data.p_localite;
-
-        if(data.level) {
-            document.getElementById('inputs-container').innerHTML = '';
-            data.level.forEach((lvl, i) => {
-                addRow();
-                const rows = document.querySelectorAll('.row');
-                const r = rows[rows.length - 1];
-                r.querySelector('.level-select').value = lvl;
-                updateRowType(r.querySelector('.level-select'));
-                r.querySelector('.title-input').value = data.title[i];
-                if(data.parent_folder && data.parent_folder[i] !== undefined) {
-                    r.querySelector('.parent-hidden').value = data.parent_folder[i];
-                }
-            });
-            refreshAllLists();
-        }
-    } else { 
-        // Lignes par défaut pour un projet vierge
-        const defaultLines = [
-            {val: "1", text: "Nom du Persona"},
-            {val: "age", text: "Âge"},
-            {val: "3", text: "Personnalité (Bio)"},
-            {val: "3", text: "Traits de caractère"},
-            {val: "3", text: "Frustrations & Freins"},
-            {val: "3", text: "Objectifs & Besoins"}
-        ];
-
-        defaultLines.forEach(line => {
-            addRow();
-            const rows = document.querySelectorAll('.row');
-            const lastRow = rows[rows.length - 1];
-            const select = lastRow.querySelector('.level-select');
-            
-            // Cherche l'option par texte pour les doublons de value "3"
-            for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text === line.text) {
-                    select.selectedIndex = i;
-                    break;
+        function handleDragOver(e) { e.preventDefault(); return false; }
+        function handleDragEnd(e) { this.classList.remove('dragging'); }
+        function handleDrop(e) {
+            e.stopPropagation();
+            if (dragSrcEl !== this) {
+                const list = document.getElementById('inputs-container');
+                const allNodes = Array.from(list.children);
+                if (allNodes.indexOf(dragSrcEl) < allNodes.indexOf(this)) {
+                    list.insertBefore(dragSrcEl, this.nextSibling);
+                } else {
+                    list.insertBefore(dragSrcEl, this);
                 }
             }
-            updateRowType(select);
-        });
-    }
-};
-</script>
+            return false;
+        }
+
+        function addRow() {
+            const container = document.getElementById('inputs-container');
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.draggable = true;
+            row.addEventListener('dragstart', handleDragStart);
+            row.addEventListener('dragover', handleDragOver);
+            row.addEventListener('drop', handleDrop);
+            row.addEventListener('dragend', handleDragEnd);
+
+            row.innerHTML = `
+                <div class="drag-handle">☰</div>
+                <div class="input-group">
+                    <select name="level[]" class="level-select" onchange="updateRowType(this)">
+                        <optgroup label="STRUCTURE">
+                            <option value="1">Dossier Racine (Niveau 1)</option>
+                            <option value="2">Sous-Dossier (Niveau 2)</option>
+                        </optgroup>
+                        <optgroup label="CONTENU">
+                            <option value="3">Citation / Verbatim</option>
+                            <option value="3_sit">Situation familiale</option>
+                            <option value="3_loc">Lieu de vie (Type d'habitat)</option>
+                            <option value="3_met">Métier / Secteur</option>
+                            <option value="3_per">Personnalité (Bio)</option>
+                            <option value="3_tra">Traits de caractère</option>
+                            <option value="3_mot">Motivations / Objectifs</option>
+                            <option value="3_fru">Frustrations / Freins</option>
+                            <option value="age">Âge</option>
+                        </optgroup>
+                    </select>
+                    <div class="content-wrapper"></div>
+                </div>
+                <button type="button" class="btn-remove" onclick="this.closest('.row').remove()">X</button>
+            `;
+            container.appendChild(row);
+            updateRowType(row.querySelector('.level-select'));
+        }
+
+        function updateRowType(select) {
+            const wrapper = select.closest('.row').querySelector('.content-wrapper');
+            const val = select.value;
+            let input;
+            if (val === "age") {
+                input = document.createElement('input');
+                input.type = "number";
+                input.placeholder = "Âge...";
+            } else if (val === "1" || val === "2") {
+                input = document.createElement('input');
+                input.type = "text";
+                input.placeholder = "Nom du dossier...";
+            } else {
+                input = document.createElement('textarea');
+                input.placeholder = "Votre réponse ici !";
+            }
+            input.name = "content[]";
+            input.className = "content-input";
+            wrapper.innerHTML = '';
+            wrapper.appendChild(input);
+        }
+
+        window.onload = () => {
+            const data = <?php echo $loadedData; ?>;
+            if (data && data.level) {
+                data.level.forEach((lvl, i) => {
+                    addRow();
+                    const r = document.querySelectorAll('.row')[i];
+                    r.querySelector('.level-select').value = lvl;
+                    updateRowType(r.querySelector('.level-select'));
+                    r.querySelector('.content-input').value = data.content[i] || "";
+                });
+            } else {
+                ["1", "age", "3", "3_sit", "3_loc", "3_met", "3_per", "3_tra", "3_mot", "3_fru"].forEach(d => {
+                    addRow();
+                    const r = document.querySelector('.row:last-child');
+                    r.querySelector('.level-select').value = d;
+                    updateRowType(r.querySelector('.level-select'));
+                });
+            }
+        };
+    </script>
 </body>
 </html>
