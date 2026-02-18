@@ -1,17 +1,19 @@
 <?php
-error_reporting(E_ALL); 
+error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once 'core/personator.php';
 
 $backupDir = 'core/backups/';
-if (!is_dir($backupDir)) { mkdir($backupDir, 0777, true); }
+if (!is_dir($backupDir)) {
+    mkdir($backupDir, 0777, true);
+}
 
 $loadedData = 'null';
 if (isset($_GET['load']) && !empty($_GET['load'])) {
     $fileToLoad = $backupDir . basename($_GET['load']);
-    if (file_exists($fileToLoad) && !is_dir($fileToLoad)) { 
-        $loadedData = file_get_contents($fileToLoad); 
+    if (file_exists($fileToLoad) && !is_dir($fileToLoad)) {
+        $loadedData = file_get_contents($fileToLoad);
     }
 }
 
@@ -20,17 +22,27 @@ $projectName = !empty($_POST['config_name']) ? basename($_POST['config_name']) :
 $app = new Personator($projectName, $_POST, $_FILES);
 $statusMessage = "";
 
+// SAUVEGARDER CONFIG (Bouton spécifique)
 if (isset($_POST['save_config'])) {
     $name = !empty($_POST['config_name']) ? basename($_POST['config_name']) : 'sans-nom-' . date('Y-m-d_H-i');
     file_put_contents($backupDir . $name . '.json', json_encode($_POST));
     $statusMessage = "Configuration '$name' sauvegardée !";
 }
 
+// GÉNÉRER LE PERSONA (Avec sauvegarde automatique intégrée)
 if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content'])) {
+    // 1. Définition du nom final pour garantir la cohérence
+    $finalName = !empty($_POST['config_name']) ? basename($_POST['config_name']) : 'Nouveau-Persona';
+
+    // 2. Sauvegarde forcée dans les backups
+    file_put_contents($backupDir . $finalName . '.json', json_encode($_POST));
+
+    // 3. Appel de l'exportateur avec le nom synchronisé
     require_once 'core/Exporter.php';
     $exporter = new Exporter();
-    $exporter->generate($projectName, $_POST['level'], $_POST['content']);
-    $statusMessage = "✅ PERSONA GÉNÉRÉ DANS /export/$projectName !";
+    $exporter->generate($finalName, $_POST['level'], $_POST['content']);
+
+    $statusMessage = "✅ PERSONA GÉNÉRÉ DANS /export/$finalName ET SAUVEGARDÉ !";
 }
 ?>
 
