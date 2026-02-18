@@ -90,26 +90,27 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
         
         .input-group { display: flex; gap: 10px; flex: 1; align-items: stretch; }
         .content-wrapper { flex: 1; min-width: 0; }
-        
-.level-select, .content-input, .btn-remove { 
-    min-height: 40px; /* On passe de height à min-height */
-    border: 1px solid #444;
-    border-radius: 4px;
-    background: #333;
-    color: #fff;
-    font-size: 14px;
-}
+   
+        .level-select, .content-input, .btn-remove { 
+            height: 40px; 
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
         .level-select { flex: 0 0 250px; padding: 0 10px; }
         .content-input { width: 100%; padding: 0 10px; background: #111; }
-        
-textarea.content-input { 
-    padding: 10px; 
-    height: 40px; 
-    min-height: 40px; /* Force la base */
-    resize: none; 
-    overflow: hidden; /* Empêche l'apparition de la scrollbar */
-    line-height: 20px; /* Aide au calcul précis */
-}
+     
+        textarea.content-input { 
+            padding: 8px 10px; 
+            resize: none; 
+            overflow: hidden; 
+            line-height: 22px; 
+            display: block; 
+        }
 
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -231,60 +232,45 @@ textarea.content-input {
             updateRowType(row.querySelector('.level-select'));
         }
 
+        function updateRowType(select) {
+            const wrapper = select.closest('.row').querySelector('.content-wrapper');
+            const val = select.value;
+            let input;
 
+            if (val === "age") {
+                input = document.createElement('input');
+                input.type = "number";
+                input.placeholder = "Âge...";
+            } else if (val === "1" || val === "2") {
+                input = document.createElement('input');
+                input.type = "text";
+                input.placeholder = "Nom du dossier...";
+            } else {
+                input = document.createElement('textarea');
+                input.placeholder = "Votre réponse ici !";
+                
+                input.addEventListener('input', function() {
+                    this.style.height = '40px'; 
+                    if (this.scrollHeight > 40) {
+                        this.style.height = (this.scrollHeight) + 'px';
+                    }
+                });
+            }
 
+            input.name = "content[]";
+            input.className = "content-input";
+            wrapper.innerHTML = '';
+            wrapper.appendChild(input);
 
-
-
-
-
-function updateRowType(select) {
-    const wrapper = select.closest('.row').querySelector('.content-wrapper');
-    const val = select.value;
-    let input;
-
-    if (val === "age") {
-        input = document.createElement('input');
-        input.type = "number";
-        input.placeholder = "Âge...";
-    } else if (val === "1" || val === "2") {
-        input = document.createElement('input');
-        input.type = "text";
-        input.placeholder = "Nom du dossier...";
-    } else {
-        input = document.createElement('textarea');
-        input.placeholder = "Votre réponse ici !";
-        
-        // Ajustement dynamique lors de la saisie
-        input.addEventListener('input', function() {
-            this.style.height = 'auto'; 
-            this.style.height = this.scrollHeight + 'px';
-        });
-    }
-
-    input.name = "content[]";
-    input.className = "content-input";
-    wrapper.innerHTML = '';
-    wrapper.appendChild(input);
-
-    // Force le calcul immédiat après l'ajout au DOM (pour les données chargées)
-    if (input.tagName === 'TEXTAREA') {
-        setTimeout(() => {
-            input.style.height = 'auto';
-            input.style.height = input.scrollHeight + 'px';
-        }, 0);
-    }
-}
-
-
-
-
-
-
-
-
-
-
+            if (input.tagName === 'TEXTAREA') {
+                setTimeout(() => {
+                    input.style.height = '40px';
+                    if (input.scrollHeight > 40) {
+                        input.style.height = input.scrollHeight + 'px';
+                    }
+                }, 0);
+            }
+        }
 
         window.onload = () => {
             const data = <?php echo $loadedData; ?>;
