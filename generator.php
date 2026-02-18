@@ -27,8 +27,9 @@ if (isset($_POST['save_config'])) {
 }
 
 if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content'])) {
-    if (!is_dir("export")) { mkdir("export", 0777, true); }
-    $app->arborate($_POST);
+    require_once 'core/Exporter.php';
+    $exporter = new Exporter();
+    $exporter->generate($projectName, $_POST['level'], $_POST['content']);
     $statusMessage = "✅ PERSONA GÉNÉRÉ DANS /export/$projectName !";
 }
 ?>
@@ -58,7 +59,7 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
             font-size: 0.8em;
             flex: none;
             position: relative;
-            z-index: 10; /* Priorité sur le survol */
+            z-index: 10;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
         }
@@ -71,8 +72,8 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
             flex: 1; 
             text-align: center; 
             margin: 0; 
-            transform: translateX(-35px); /* Ajusté pour éviter de couvrir le bouton */
-            pointer-events: none; /* Le titre ne bloque plus les clics autour de lui */
+            transform: translateX(-35px);
+            pointer-events: none;
         }
 
         .load-zone, .save-zone-container { background: #222; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #333; }
@@ -90,17 +91,25 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
         .input-group { display: flex; gap: 10px; flex: 1; align-items: stretch; }
         .content-wrapper { flex: 1; min-width: 0; }
         
-        .level-select, .content-input, .btn-remove { 
-            height: 40px !important; 
-            border: 1px solid #444;
-            border-radius: 4px;
-            background: #333;
-            color: #fff;
-            font-size: 14px;
-        }
+.level-select, .content-input, .btn-remove { 
+    min-height: 40px; /* On passe de height à min-height */
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #333;
+    color: #fff;
+    font-size: 14px;
+}
         .level-select { flex: 0 0 250px; padding: 0 10px; }
         .content-input { width: 100%; padding: 0 10px; background: #111; }
-        textarea.content-input { padding: 10px; height: 40px !important; resize: none; }
+        
+textarea.content-input { 
+    padding: 10px; 
+    height: 40px; 
+    min-height: 40px; /* Force la base */
+    resize: none; 
+    overflow: hidden; /* Empêche l'apparition de la scrollbar */
+    line-height: 20px; /* Aide au calcul précis */
+}
 
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -140,6 +149,12 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
                 <a href="?" class="clear-btn">CLEAR</a>
             </form>
         </div>
+
+        <?php if ($statusMessage): ?>
+            <div style="padding: 15px; margin-bottom: 20px; background: #27ae60; color: white; border-radius: 4px; text-align: center;">
+                <?php echo $statusMessage; ?>
+            </div>
+        <?php endif; ?>
 
         <form method="POST" id="main-form">
             <div id="inputs-container"></div>
@@ -216,27 +231,60 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
             updateRowType(row.querySelector('.level-select'));
         }
 
-        function updateRowType(select) {
-            const wrapper = select.closest('.row').querySelector('.content-wrapper');
-            const val = select.value;
-            let input;
-            if (val === "age") {
-                input = document.createElement('input');
-                input.type = "number";
-                input.placeholder = "Âge...";
-            } else if (val === "1" || val === "2") {
-                input = document.createElement('input');
-                input.type = "text";
-                input.placeholder = "Nom du dossier...";
-            } else {
-                input = document.createElement('textarea');
-                input.placeholder = "Votre réponse ici !";
-            }
-            input.name = "content[]";
-            input.className = "content-input";
-            wrapper.innerHTML = '';
-            wrapper.appendChild(input);
-        }
+
+
+
+
+
+
+
+function updateRowType(select) {
+    const wrapper = select.closest('.row').querySelector('.content-wrapper');
+    const val = select.value;
+    let input;
+
+    if (val === "age") {
+        input = document.createElement('input');
+        input.type = "number";
+        input.placeholder = "Âge...";
+    } else if (val === "1" || val === "2") {
+        input = document.createElement('input');
+        input.type = "text";
+        input.placeholder = "Nom du dossier...";
+    } else {
+        input = document.createElement('textarea');
+        input.placeholder = "Votre réponse ici !";
+        
+        // Ajustement dynamique lors de la saisie
+        input.addEventListener('input', function() {
+            this.style.height = 'auto'; 
+            this.style.height = this.scrollHeight + 'px';
+        });
+    }
+
+    input.name = "content[]";
+    input.className = "content-input";
+    wrapper.innerHTML = '';
+    wrapper.appendChild(input);
+
+    // Force le calcul immédiat après l'ajout au DOM (pour les données chargées)
+    if (input.tagName === 'TEXTAREA') {
+        setTimeout(() => {
+            input.style.height = 'auto';
+            input.style.height = input.scrollHeight + 'px';
+        }, 0);
+    }
+}
+
+
+
+
+
+
+
+
+
+
 
         window.onload = () => {
             const data = <?php echo $loadedData; ?>;
