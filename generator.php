@@ -18,7 +18,6 @@ if (isset($_GET['load']) && !empty($_GET['load'])) {
 $backups = array_diff(scandir($backupDir), ['.', '..']);
 
 $projectName = !empty($_POST['config_name']) ? basename($_POST['config_name']) : "Nouveau-Persona";
-// Mise à jour de l'instanciation pour gérer les fichiers et le POST global
 $app = new Personator($projectName, $_POST, $_FILES);
 $statusMessage = "";
 
@@ -113,32 +112,18 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
         .config-name-input { flex: 1 1 250px; padding: 10px; background: #111; color: orange; border: 1px solid #555; }
         .btn-save { background: #e67e22; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 4px; flex: 0 1 auto; }
         
-        @media (max-width: 600px) {
-            .row { padding: 15px; }
-            .input-group { flex-direction: column; }
-            .level-select, .title-input, .parent-selector { width: 100%; flex: none; }
-            .btn-remove { width: 100%; margin: 10px 0 0 0; }
-            .config-name-input { width: 100%; }
-            .btn-save { width: 100%; }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
-/* Supprime les flèches sur Chrome, Safari, Edge, Opera */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-/* Supprime les flèches sur Firefox */
-input[type="number"] {
-    -moz-appearance: textfield;
-    background: #333 !important;
-    color: orange !important;
-    border: 1px solid #444 !important;
-}
-
-
-
+        input[type="number"] {
+            -moz-appearance: textfield;
+            background: #333 !important;
+            color: orange !important;
+            border: 1px solid #444 !important;
+        }
     </style>
 </head>
 <body>
@@ -179,12 +164,6 @@ input[type="number"] {
             <input type="file" name="p_photo" accept="image/*" style="width: 100%; color: #eee;">
         </div>
 
-        <!--<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
-            <textarea name="p_personnalite" placeholder="Personnalité" style="flex: 1 1 250px; height:80px;"></textarea>
-            <textarea name="p_frustrations" placeholder="Frustrations" style="flex: 1 1 250px; height:80px;"></textarea>
-            <textarea name="p_objectifs" placeholder="Objectifs" style="flex: 1 1 250px; height:80px;"></textarea>
-        </div>-->
-
         <div id="inputs-container"></div>
         <button type="button" class="btn-add" onclick="addRow()">+ Ajouter une ligne d'info libre</button>
 
@@ -212,16 +191,6 @@ function handleDrop(e) {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
 function addRow() {
     const container = document.getElementById('inputs-container');
     const newRow = document.createElement('div');
@@ -231,16 +200,24 @@ function addRow() {
         <div class="drag-handle">☰</div>
         <div class="input-group">
             <select name="level[]" class="level-select" onchange="updateRowType(this)">
-                <option value="1">Nom du Persona</option>
-                <option value="2" hidden>Section (Bloc)</option>
-                <option value="age">Âge</option>
-                <option value="3">Traits de personnalité</option>
-                <option value="3">Aisance numérique</option>
-                <option value="3">Outils utilisés</option>
-                <option value="3">Objectifs & Besoins</option>
-                <option value="3">Frustrations & Freins</option>
-                <option value="3">Citation / Verbatim</option>
-                <option value="3_dir">Liste à puces (Infos diverses)</option>
+                <optgroup label="IDENTITÉ & ÉTAT CIVIL">
+                    <option value="1">Nom du Persona</option>
+                    <option value="age">Âge</option>
+                    <option value="3">Citation / Verbatim</option>
+                </optgroup>
+                <optgroup label="PROFIL PSYCHOLOGIQUE">
+                    <option value="3">Personnalité (Bio)</option>
+                    <option value="3">Traits de caractère</option>
+                    <option value="3">Frustrations & Freins</option>
+                </optgroup>
+                <optgroup label="APTITUDES TECHNIQUES">
+                    <option value="3">Outils utilisés</option>
+                    <option value="3">Aisance numérique</option>
+                </optgroup>
+                <optgroup label="OBJECTIFS & LOISIRS">
+                    <option value="3">Objectifs & Besoins</option>
+                    <option value="3_dir">Liste à puces (Loisirs / Infos diverses)</option>
+                </optgroup>
             </select>
             <input type="text" name="title[]" placeholder="Texte ou intitulé" class="title-input">
             <input type="hidden" name="parent_folder[]" class="parent-hidden">
@@ -256,6 +233,7 @@ function addRow() {
     updateRowType(newRow.querySelector('.level-select'));
     refreshAllLists();
 }
+
 
 
 
@@ -283,6 +261,8 @@ function updateRowType(select) {
              text === "Outils utilisés" || 
              text === "Objectifs & Besoins" || 
              text === "Frustrations & Freins" || 
+             text === "Personnalité (Bio)" ||
+             val === "3" || 
              val === "3_dir") {
         
         newInput = document.createElement('textarea');
@@ -297,9 +277,7 @@ function updateRowType(select) {
         });
 
         newInput.addEventListener('focus', function() {
-            if (this.value === "") {
-                this.value = "• ";
-            }
+            if (this.value === "") { this.value = "• "; }
         });
 
         newInput.addEventListener('keydown', function(e) {
@@ -332,50 +310,14 @@ function updateRowType(select) {
 
     if (oldInput) {
         oldInput.replaceWith(newInput);
-        // Déclencher l'agrandissement si le champ contient déjà du texte
         if (newInput.tagName === "TEXTAREA") {
             newInput.dispatchEvent(new Event('input'));
         }
     }
-}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Nouvelle fonction pour changer le type de champ dynamiquement
-function updateInputType(selectElement) {
-    const row = selectElement.closest('.row');
-    const input = row.querySelector('.title-input');
-    if (selectElement.value === "age") {
-        input.type = "number";
-        input.placeholder = "Ex: 35";
-        input.style.flex = "0 1 100px";
-    } else {
-        input.type = "text";
-        input.placeholder = "Texte ou intitulé";
-        input.style.flex = "2 1 200px";
-    }
-    // On force le respect des couleurs du thème
-    input.style.background = "#333";
-    input.style.color = "#fff";
-    input.style.border = "1px solid #444";
-    
+    // Indispensable pour afficher l'onglet parent immédiatement
     refreshAllLists();
 }
-
-
-
 
 
 
@@ -384,20 +326,27 @@ function updateInputType(selectElement) {
 function refreshAllLists() {
     const rows = document.querySelectorAll('.row');
     const dossiers = [];
+    
+    // 1. On liste tous les dossiers (Section) présents
     rows.forEach((row, i) => {
         if(row.querySelector('.level-select').value === "2") {
             dossiers.push({i: i, name: row.querySelector('.title-input').value || "Dossier " + (i + 1)});
         }
     });
+
+    // 2. On met à jour chaque ligne
     rows.forEach(row => {
         const lvl = row.querySelector('.level-select').value;
         const sel = row.querySelector('.parent-selector');
         const hid = row.querySelector('.parent-hidden');
+
+        // On affiche le parent-selector pour TOUT ce qui commence par 3
         if(lvl.startsWith("3")) {
             const old = row.getAttribute('data-temp') || hid.value;
             sel.innerHTML = '<option value="">-- Parent --</option>' + 
                 dossiers.map(d => `<option value="${d.i}" ${d.i == old ? 'selected' : ''}>${d.name}</option>`).join('');
-            sel.style.display = 'inline-block';
+            
+            sel.style.display = 'inline-block'; // Force l'affichage
             sel.onchange = () => { hid.value = sel.value; row.removeAttribute('data-temp'); };
             hid.value = sel.value;
         } else {
@@ -407,16 +356,20 @@ function refreshAllLists() {
     });
 }
 
+
+
+
+
+
+
+
+
 const data = <?php echo $loadedData; ?>;
 window.onload = () => {
     if(data) {
-        // Remplissage auto des champs fixes si présents dans le JSON
         if(data.p_prenom) document.querySelector('input[name="p_prenom"]').value = data.p_prenom;
         if(data.p_nom) document.querySelector('input[name="p_nom"]').value = data.p_nom;
         if(data.p_localite) document.querySelector('input[name="p_localite"]').value = data.p_localite;
-        if(data.p_personnalite) document.querySelector('textarea[name="p_personnalite"]').value = data.p_personnalite;
-        if(data.p_frustrations) document.querySelector('textarea[name="p_frustrations"]').value = data.p_frustrations;
-        if(data.p_objectifs) document.querySelector('textarea[name="p_objectifs"]').value = data.p_objectifs;
 
         if(data.level) {
             document.getElementById('inputs-container').innerHTML = '';
@@ -425,22 +378,40 @@ window.onload = () => {
                 const rows = document.querySelectorAll('.row');
                 const r = rows[rows.length - 1];
                 r.querySelector('.level-select').value = lvl;
+                updateRowType(r.querySelector('.level-select'));
                 r.querySelector('.title-input').value = data.title[i];
                 if(data.parent_folder && data.parent_folder[i] !== undefined) {
                     r.querySelector('.parent-hidden').value = data.parent_folder[i];
                 }
             });
             refreshAllLists();
-            document.querySelectorAll('.row').forEach(row => {
-                const hid = row.querySelector('.parent-hidden');
-                const sel = row.querySelector('.parent-selector');
-                if (sel && hid && hid.value !== "") {
-                    sel.value = hid.value;
-                }
-            });
         }
     } else { 
-        addRow(); 
+        // Lignes par défaut pour un projet vierge
+        const defaultLines = [
+            {val: "1", text: "Nom du Persona"},
+            {val: "age", text: "Âge"},
+            {val: "3", text: "Personnalité (Bio)"},
+            {val: "3", text: "Traits de caractère"},
+            {val: "3", text: "Frustrations & Freins"},
+            {val: "3", text: "Objectifs & Besoins"}
+        ];
+
+        defaultLines.forEach(line => {
+            addRow();
+            const rows = document.querySelectorAll('.row');
+            const lastRow = rows[rows.length - 1];
+            const select = lastRow.querySelector('.level-select');
+            
+            // Cherche l'option par texte pour les doublons de value "3"
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text === line.text) {
+                    select.selectedIndex = i;
+                    break;
+                }
+            }
+            updateRowType(select);
+        });
     }
 };
 </script>
