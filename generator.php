@@ -2,7 +2,7 @@
 error_reporting(E_ALL); 
 ini_set('display_errors', 1);
 
-require_once 'core/skeletor.php';
+require_once 'core/personator.php';
 
 $backupDir = 'core/backups/';
 if (!is_dir($backupDir)) { mkdir($backupDir, 0777, true); }
@@ -17,8 +17,9 @@ if (isset($_GET['load']) && !empty($_GET['load'])) {
 
 $backups = array_diff(scandir($backupDir), ['.', '..']);
 
-$projectName = !empty($_POST['config_name']) ? basename($_POST['config_name']) : "MonNouveauProjet";
-$app = new Skeletor($projectName);
+$projectName = !empty($_POST['config_name']) ? basename($_POST['config_name']) : "Nouveau-Persona";
+// Mise à jour de l'instanciation pour gérer les fichiers et le POST global
+$app = new Personator($projectName, $_POST, $_FILES);
 $statusMessage = "";
 
 if (isset($_POST['save_config'])) {
@@ -89,7 +90,7 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skeletor v1.0</title>
+    <title>Personator v1.0</title>
     <style>
         body { font-family: sans-serif; background: #1a1a1a; color: #eee; padding: 20px; margin: 0; }
         .container { max-width: 900px; margin: auto; background: #222; padding: 20px; border: 1px solid #333; border-radius: 8px; }
@@ -97,7 +98,7 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
         .row { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 10px; background: #2a2a2a; padding: 10px; border-radius: 4px; gap: 10px; }
         .drag-handle { cursor: grab; padding: 5px 10px; color: #666; font-size: 20px; user-select: none; }
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; flex-grow: 1; }
-        select, input[type="text"] { padding: 10px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
+        select, input[type="text"], textarea { padding: 10px; background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
         .level-select { flex: 1 1 150px; }
         .title-input { flex: 2 1 200px; }
         .parent-selector { flex: 1 1 150px; }
@@ -120,12 +121,30 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
             .config-name-input { width: 100%; }
             .btn-save { width: 100%; }
         }
+
+/* Supprime les flèches sur Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Supprime les flèches sur Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+    background: #333 !important;
+    color: orange !important;
+    border: 1px solid #444 !important;
+}
+
+
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Skeletor v1.0</h1>
+    <h1>Personator v1.0</h1>
     <a href="admin.php" class="admin-link">Admin</a>
     
     <?php if($statusMessage): ?>
@@ -148,42 +167,33 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['title']
         </form>
     </div>
 
-    <form method="POST" id="main-form">
+    <form method="POST" id="main-form" enctype="multipart/form-data">
+        
+        <div style="background: #2a2a2a; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #444;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <input type="text" name="p_prenom" placeholder="Prénom" style="flex: 1 1 200px;">
+                <input type="text" name="p_nom" placeholder="Nom" style="flex: 1 1 200px;">
+                <input type="text" name="p_localite" placeholder="Localité" style="flex: 1 1 200px;">
+            </div>
+            <label style="font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 5px;">Photo du Persona :</label>
+            <input type="file" name="p_photo" accept="image/*" style="width: 100%; color: #eee;">
+        </div>
+
+        <!--<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+            <textarea name="p_personnalite" placeholder="Personnalité" style="flex: 1 1 250px; height:80px;"></textarea>
+            <textarea name="p_frustrations" placeholder="Frustrations" style="flex: 1 1 250px; height:80px;"></textarea>
+            <textarea name="p_objectifs" placeholder="Objectifs" style="flex: 1 1 250px; height:80px;"></textarea>
+        </div>-->
+
         <div id="inputs-container"></div>
-        <button type="button" class="btn-add" onclick="addRow()">+ Ajouter une ligne</button>
-
-
-
-
-
-
-
-
-
+        <button type="button" class="btn-add" onclick="addRow()">+ Ajouter une ligne d'info libre</button>
 
         <div class="save-zone">
             <input type="text" name="config_name" placeholder="Nom du projet" class="config-name-input" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
-            <button type="submit" name="save_config" class="btn-save">💾 SAUVEGARDER</button>
+            <button type="submit" name="save_config" class="btn-save">💾 SAUVEGARDER CONFIG</button>
         </div>
-        <button type="submit" name="generate" class="btn-submit">GÉNÉRER L'ARBORESCENCE</button>
+        <button type="submit" name="generate" class="btn-submit">GÉNÉRER LE PERSONA</button>
     </form>
-
-
-
-
-
-
-
-<!--  ELEMENTS DU TREE 
-<div id="tree-preview" style="margin-top: 20px; padding: 20px; background: #2d2d2d; color: #adadad; border-radius: 8px; font-family: monospace;">
-    <h3 style="color: #fff; margin-top: 0;">🌲 Aperçu de la structure</h3>
-    <div id="tree-display"></div>
-</div>
-ELEMENTS DU TREE   -->
-
-
-
-
 </div>
 
 <script>
@@ -212,22 +222,6 @@ function handleDrop(e) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function addRow() {
     const container = document.getElementById('inputs-container');
     const newRow = document.createElement('div');
@@ -236,37 +230,113 @@ function addRow() {
     newRow.innerHTML = `
         <div class="drag-handle">☰</div>
         <div class="input-group">
-
-
-            <select name="level[]" class="level-select">
-                <option value="1">Nom du site</option>
-                <option value="2">Dossier</option>
-                <option value="3">Sous-dossier</option>
-                <option value="3_dir">Pages</option>
+            <select name="level[]" class="level-select" onchange="updateRowType(this)">
+                <option value="1">Nom du Persona</option>
+                <option value="2" hidden>Section (Bloc)</option>
+                <option value="age">Âge</option>
+                <option value="3">Traits de personnalité</option>
+                <option value="3">Aisance numérique</option>
+                <option value="3">Outils utilisés</option>
+                <option value="3">Objectifs & Besoins</option>
+                <option value="3">Frustrations & Freins</option>
+                <option value="3">Citation / Verbatim</option>
+                <option value="3_dir">Liste à puces (Infos diverses)</option>
             </select>
-
-
-            <input type="text" name="title[]" placeholder="Nom" class="title-input">
+            <input type="text" name="title[]" placeholder="Texte ou intitulé" class="title-input">
             <input type="hidden" name="parent_folder[]" class="parent-hidden">
             <select class="parent-selector" style="display:none;"></select>
         </div>
         <button type="button" class="btn-remove" onclick="this.closest('.row').remove(); refreshAllLists();">X</button>`;
-    
-
-
-
-
-
 
     newRow.addEventListener('dragstart', handleDragStart);
     newRow.addEventListener('dragover', handleDragOver);
     newRow.addEventListener('drop', handleDrop);
     
-    newRow.querySelector('.level-select').onchange = refreshAllLists;
-    newRow.querySelector('.title-input').oninput = refreshAllLists;
-    
     container.appendChild(newRow);
+    updateRowType(newRow.querySelector('.level-select'));
     refreshAllLists();
+}
+
+
+
+
+
+
+
+function updateRowType(select) {
+    const row = select.closest('.row');
+    const oldInput = row.querySelector('.title-input');
+    let newInput;
+
+    const val = select.value;
+    const text = select.options[select.selectedIndex].text;
+
+    if (val === "age") {
+        newInput = document.createElement('input');
+        newInput.type = "number";
+        newInput.placeholder = "Votre age";
+        newInput.style.width = "100px";
+        newInput.style.flex = "none";
+    } 
+    else if (text === "Traits de personnalité" || 
+             text === "Aisance numérique" || 
+             text === "Outils utilisés" || 
+             text === "Objectifs & Besoins" || 
+             text === "Frustrations & Freins" || 
+             val === "3_dir") {
+        
+        newInput = document.createElement('textarea');
+        newInput.placeholder = "Liste d'éléments (un par ligne)";
+        newInput.style.height = "40px";
+        newInput.style.overflow = "hidden";
+        newInput.style.flex = "2 1 200px";
+        
+        newInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        newInput.addEventListener('focus', function() {
+            if (this.value === "") {
+                this.value = "• ";
+            }
+        });
+
+        newInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + "\n• " + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 3;
+                this.dispatchEvent(new Event('input'));
+            }
+        });
+    } 
+    else {
+        newInput = document.createElement('input');
+        newInput.type = "text";
+        newInput.placeholder = "Texte ou intitulé";
+        newInput.style.flex = "2 1 200px";
+    }
+
+    newInput.name = "title[]";
+    newInput.className = "title-input";
+    newInput.style.background = "#333";
+    newInput.style.color = (val === "age") ? "orange" : "#fff";
+    newInput.style.border = "1px solid #444";
+    newInput.style.padding = "10px";
+    newInput.style.borderRadius = "4px";
+    newInput.style.outline = "none";
+    newInput.style.resize = "none";
+
+    if (oldInput) {
+        oldInput.replaceWith(newInput);
+        // Déclencher l'agrandissement si le champ contient déjà du texte
+        if (newInput.tagName === "TEXTAREA") {
+            newInput.dispatchEvent(new Event('input'));
+        }
+    }
 }
 
 
@@ -283,8 +353,26 @@ function addRow() {
 
 
 
-
-
+// Nouvelle fonction pour changer le type de champ dynamiquement
+function updateInputType(selectElement) {
+    const row = selectElement.closest('.row');
+    const input = row.querySelector('.title-input');
+    if (selectElement.value === "age") {
+        input.type = "number";
+        input.placeholder = "Ex: 35";
+        input.style.flex = "0 1 100px";
+    } else {
+        input.type = "text";
+        input.placeholder = "Texte ou intitulé";
+        input.style.flex = "2 1 200px";
+    }
+    // On force le respect des couleurs du thème
+    input.style.background = "#333";
+    input.style.color = "#fff";
+    input.style.border = "1px solid #444";
+    
+    refreshAllLists();
+}
 
 
 
@@ -321,32 +409,40 @@ function refreshAllLists() {
 
 const data = <?php echo $loadedData; ?>;
 window.onload = () => {
-    if(data && data.level) {
-        document.getElementById('inputs-container').innerHTML = '';
-        data.level.forEach((lvl, i) => {
-            addRow();
-            const rows = document.querySelectorAll('.row');
-            const r = rows[rows.length - 1];
-            r.querySelector('.level-select').value = lvl;
-            r.querySelector('.title-input').value = data.title[i];
-            if(data.parent_folder && data.parent_folder[i] !== undefined) {
-                r.querySelector('.parent-hidden').value = data.parent_folder[i];
-            }
-        });
-        refreshAllLists();
-        document.querySelectorAll('.row').forEach(row => {
-            const hid = row.querySelector('.parent-hidden');
-            const sel = row.querySelector('.parent-selector');
-            if (sel && hid && hid.value !== "") {
-                sel.value = hid.value;
-            }
-        });
+    if(data) {
+        // Remplissage auto des champs fixes si présents dans le JSON
+        if(data.p_prenom) document.querySelector('input[name="p_prenom"]').value = data.p_prenom;
+        if(data.p_nom) document.querySelector('input[name="p_nom"]').value = data.p_nom;
+        if(data.p_localite) document.querySelector('input[name="p_localite"]').value = data.p_localite;
+        if(data.p_personnalite) document.querySelector('textarea[name="p_personnalite"]').value = data.p_personnalite;
+        if(data.p_frustrations) document.querySelector('textarea[name="p_frustrations"]').value = data.p_frustrations;
+        if(data.p_objectifs) document.querySelector('textarea[name="p_objectifs"]').value = data.p_objectifs;
+
+        if(data.level) {
+            document.getElementById('inputs-container').innerHTML = '';
+            data.level.forEach((lvl, i) => {
+                addRow();
+                const rows = document.querySelectorAll('.row');
+                const r = rows[rows.length - 1];
+                r.querySelector('.level-select').value = lvl;
+                r.querySelector('.title-input').value = data.title[i];
+                if(data.parent_folder && data.parent_folder[i] !== undefined) {
+                    r.querySelector('.parent-hidden').value = data.parent_folder[i];
+                }
+            });
+            refreshAllLists();
+            document.querySelectorAll('.row').forEach(row => {
+                const hid = row.querySelector('.parent-hidden');
+                const sel = row.querySelector('.parent-selector');
+                if (sel && hid && hid.value !== "") {
+                    sel.value = hid.value;
+                }
+            });
+        }
     } else { 
         addRow(); 
     }
 };
-
 </script>
-<!--<script src="preview.js"></script>-->
 </body>
 </html>
