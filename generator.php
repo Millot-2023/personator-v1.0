@@ -29,20 +29,28 @@ if (isset($_POST['save_config'])) {
     $statusMessage = "Configuration '$name' sauvegardée !";
 }
 
-// GÉNÉRER LE PERSONA (Avec sauvegarde automatique intégrée)
+// GÉNÉRER LE PERSONA (v1.2 : Avec gestion Image)
 if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content'])) {
-    // 1. Définition du nom final pour garantir la cohérence
+    // 1. Définition du nom final
     $finalName = !empty($_POST['config_name']) ? basename($_POST['config_name']) : 'Nouveau-Persona';
 
     // 2. Sauvegarde forcée dans les backups
     file_put_contents($backupDir . $finalName . '.json', json_encode($_POST));
 
-    // 3. Appel de l'exportateur avec le nom synchronisé
+    // 3. Préparation de l'exportateur
     require_once 'core/Exporter.php';
     $exporter = new Exporter();
-    $exporter->generate($finalName, $_POST['level'], $_POST['content']);
 
-    $statusMessage = "✅ PERSONA GÉNÉRÉ DANS /export/$finalName ET SAUVEGARDÉ !";
+    // 4. Détection de l'image
+    $imageFile = null;
+    if (isset($_FILES['persona_image']) && $_FILES['persona_image']['error'] === 0) {
+        $imageFile = $_FILES['persona_image'];
+    }
+
+    // 5. Envoi à l'exportateur (Note le 4ème argument $imageFile)
+    $exporter->generate($finalName, $_POST['level'], $_POST['content'], $imageFile);
+
+    $statusMessage = "✅ PERSONA GÉNÉRÉ AVEC IMAGE DANS /export/$finalName !";
 }
 ?>
 
@@ -51,7 +59,7 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personator v1.0</title>
+    <title>Personator v1.2</title>
     <style>
         * { box-sizing: border-box; }
         body { background-color: #1a1a1a; color: #eee; font-family: sans-serif; }
@@ -144,7 +152,7 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
     <div class="container">
         <div class="header-main">
             <a href="./admin.php" class="admin-link">Admin</a>
-            <h1>Personator v1.0</h1>
+            <h1>Personator v1.2</h1>
         </div>
         
         <div class="load-zone">
@@ -169,9 +177,29 @@ if (isset($_POST['generate']) && isset($_POST['level']) && isset($_POST['content
             </div>
         <?php endif; ?>
 
-        <form method="POST" id="main-form">
+        <form method="POST" id="main-form" enctype="multipart/form-data">
             <div id="inputs-container"></div>
             <button type="button" onclick="addRow()" style="width:100%; padding:12px; margin-bottom:20px; background: #333; color: #999; border: 1px dashed #555; cursor:pointer; border-radius:4px;">+ Ajouter une ligne</button>
+ 
+            <div style="background: #222; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #333;">
+                <label style="display: block; margin-bottom: 10px; color: #f39c12; font-weight: bold;">📷 PHOTO DU PERSONA :</label>
+                
+                <?php 
+                if (isset($_GET['load'])) {
+                    $pName = str_replace('.json', '', $_GET['load']);
+                    $formats = ['jpg', 'jpeg', 'png', 'gif'];
+                    foreach ($formats as $ext) {
+                        $path = "export/" . $pName . "/img/photo." . $ext;
+                        if (file_exists($path)) {
+                            echo '<div style="margin-bottom:10px;"><img src="'.$path.'?v='.time().'" style="width:80px; height:80px; object-fit:cover; border-radius:4px; border:1px solid #f39c12;"></div>';
+                            break;
+                        }
+                    }
+                }
+                ?>
+                
+                <input type="file" name="persona_image" accept="image/*" style="background: #111; color: #eee; padding: 10px; width: 100%; border: 1px solid #444;">
+            </div>
             <div class="save-zone-container">
                 <div class="save-zone">
                     <input type="text" name="config_name" placeholder="Nom du projet" value="<?php echo isset($_GET['load']) ? str_replace('.json', '', $_GET['load']) : ''; ?>">
